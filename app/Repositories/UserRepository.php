@@ -56,7 +56,7 @@ class UserRepository implements UserRepositoryInterface
              FROM `user` u
              JOIN role r ON r.id = u.role_id
              WHERE u.invite_token = :token
-               AND u.invite_expires_at > NOW()",
+               AND u.invite_expires_at > datetime('now')",
             ['token' => $token]
         )->fetch();
 
@@ -119,7 +119,7 @@ class UserRepository implements UserRepositoryInterface
         $token = bin2hex(random_bytes(32));
         $this->database->run(
             "INSERT INTO `user` (name, email, role_id, invite_token, invite_expires_at)
-             VALUES (:name, :email, :role_id, :token, DATE_ADD(NOW(), INTERVAL 72 HOUR))",
+             VALUES (:name, :email, :role_id, :token, datetime('now', '+72 hours'))",
             ['name' => $name, 'email' => $email, 'role_id' => $roleId, 'token' => $token]
         );
         return $token;
@@ -146,7 +146,7 @@ class UserRepository implements UserRepositoryInterface
         $token = bin2hex(random_bytes(32));
         $this->database->run(
             "UPDATE `user`
-             SET invite_token = :token, invite_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+             SET invite_token = :token, invite_expires_at = datetime('now', '+72 hours')
              WHERE id = :id",
             ['token' => $token, 'id' => $id]
         );

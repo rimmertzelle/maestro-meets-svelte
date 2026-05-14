@@ -1,34 +1,54 @@
-# PHP Starter
+# PHP + Svelte Starter
 
-A project starter built on **Maestro**, a self-written lightweight PHP 8.2 MVC framework. It ships with an index page, a login page, and an admin area for managing users via magic-link invites.
+A project starter built on **Maestro**, a self-written lightweight PHP 8.2 MVC framework, with a **Svelte 5** frontend. PHP handles the JSON API and authentication; Svelte handles all UI rendering.
 
 ## Features
 
-- Index page with header and footer
+- Welcome page with context-aware CTAs
 - Email + password login
 - Magic-link invite flow — admin creates a user, shares the invite link, user sets their own password
 - Admin user management: create, edit, resend invites
-- Role-based access control (`admin` / `user`)
+- Role-based access control (`admin` / `owner`)
 - Profile page (change name, email, password)
 
 ---
 
-## Maestro Framework
+## Architecture
 
-Built on **Maestro**, a self-written lightweight PHP 8.2 MVC framework using:
+```text
+PHP backend (Maestro MVC)  →  JSON API at /api/*
+Svelte 5 frontend          →  SPA served from public/build/
+```
 
-- **Twig** for templating (Tailwind CSS + Alpine.js in views)
-- **PDO** for database access (no ORM)
+**In development:** Vite dev server runs on `:5173` and proxies `/api/*` to PHP on `:8888`. Hot module replacement works out of the box.
+
+**In production:** `npm run build` compiles Svelte to `public/build/`. PHP serves those static files and handles all `/api/*` requests. No Node.js needed on the server.
+
+### PHP layer
+
+Built on **Maestro**, a self-written PHP 8.2 MVC framework using:
+
+- **PDO** for database access — SQLite 3, no ORM
 - **Repository pattern** for data access
 - A simple **dependency injection container**
 - A **regex-based router** with named parameters
-
-Namespace layout:
+- **Twig** still present for error views (403, 404, 500)
 
 | Namespace | Directory | Role |
 | --- | --- | --- |
 | `Framework\` | `src/` | Core framework (Router, Kernel, Database, …) |
-| `App\` | `app/` | Application code (Controllers, Models, Repositories, Views) |
+| `App\` | `app/` | Application code (Controllers, Models, Repositories) |
+
+### Svelte layer
+
+| File | Role |
+| --- | --- |
+| `frontend/src/App.svelte` | Root component — bootstraps auth, client-side router |
+| `frontend/src/lib/router.svelte.js` | `router.path` state + `navigate()` (History API) |
+| `frontend/src/lib/auth.svelte.js` | Global `auth.user` state |
+| `frontend/src/lib/api.js` | `apiFetch` / `post` wrappers (JSON + session cookies) |
+| `frontend/src/components/Layout.svelte` | Nav, footer shell |
+| `frontend/src/pages/` | One file per route |
 
 ---
 
@@ -36,151 +56,140 @@ Namespace layout:
 
 ### Requirements
 
-- PHP 8.2+
+- PHP 8.2+ with `pdo_sqlite` extension
 - Composer
-- Docker (for MySQL)
+- Node.js 18+ and npm
 
 ### Setup
 
-#### 1. Start the database
-
 ```bash
-docker compose up -d
-```
-
-This starts **MySQL 8.4** on port `3306` with:
-
-| Setting | Value |
-| --- | --- |
-| Database | `maestro` |
-| User | `maestro` |
-| Password | `secret` |
-| Root password | `rootsecret` |
-
-Data is persisted in a named Docker volume (`mysql_data`), so it survives container restarts.
-
-#### 2. Install PHP dependencies
-
-```bash
+# 1. Install PHP dependencies
 composer install
-```
 
-#### 3. Run database migrations
+# 2. Install frontend dependencies
+cd frontend && npm install && cd ..
 
-```bash
+# 3. Run migrations (creates database/maestro.sqlite + default admin account)
 php maestro migrate
+
+# 4. Start PHP API + Vite dev server together
+php maestro dev
 ```
 
-This runs all `.sql` files in `database/` alphabetically, creating the schema and seeding the two roles (`admin`, `user`). It also creates a default admin account if no users exist yet:
+Open [http://localhost:5173](http://localhost:5173).
+
+A default admin account is created on first migrate:
 
 | | |
 | --- | --- |
 | Email | `admin@localhost` |
 | Password | `admin` |
 
-#### 4. Start the development server
-
-```bash
-php maestro serve
-```
-
-Open [http://localhost:8888](http://localhost:8888).
-
-### Database configuration
-
-Connection settings are read from environment variables with defaults that match the Docker setup:
-
-| Variable | Default |
-| --- | --- |
-| `APP_DB_DSN` | `mysql:host=127.0.0.1;port=3306;dbname=maestro;charset=utf8mb4` |
-| `APP_DB_USER` | `maestro` |
-| `APP_DB_PASS` | `secret` |
-
-To override, export the variables before running:
-
-```bash
-export APP_DB_DSN="mysql:host=db.example.com;port=3306;dbname=mydb;charset=utf8mb4"
-export APP_DB_USER="myuser"
-export APP_DB_PASS="mypassword"
-php maestro serve
-```
+Change the password after first login at `/profile`.
 
 ### Commands
 
 | Command | Description |
 | --- | --- |
-| `php maestro serve` | Start dev server on port 8888 |
+| `php maestro dev` | PHP API on `:8888` + Vite dev server on `:5173` |
+| `php maestro serve` | PHP server only on `:8888` (no Vite) |
+| `php maestro build` | Compile Svelte → `public/build/` for production |
 | `php maestro migrate` | Run all SQL migrations |
-| `php maestro phpcs` | Check code style (PSR via phpcs) |
+| `php maestro phpcs` | Check PHP code style (PSR via phpcs) |
 | `php maestro phpstan` | Run static analysis (level 8) |
 | `php maestro deptrac` | Check architecture layer rules |
+
+### Database configuration
+
+SQLite — the database file lives at `database/maestro.sqlite` and is created automatically by `php maestro migrate`. To use a different path, export `APP_DB_DSN` before running:
+
+```bash
+export APP_DB_DSN="sqlite:/absolute/path/to/your.sqlite"
+php maestro serve
+```
 
 ### Project structure
 
 ```text
 app/
-  Controllers/        HTTP handlers
-    AuthController    Login, logout, invite flow, profile
-    HomeController    Index page
-    UserController    Admin user management
+  Controllers/
+    Api/              JSON API controllers (consumed by Svelte)
+      AuthController  me, login, logout, invite flow, profile
+      UserController  Admin user management
+    AuthController    Legacy Twig controllers (kept for reference)
+    HomeController
+    UserController
   Models/             Plain data objects (User, Role)
   Repositories/       Data-access layer (UserRepository + interface)
-  Views/
-    partials/         base.html.twig (header + footer layout)
-    auth/             login, set_password, profile templates
-    users/            admin user management template
-    index.html.twig   Welcome page
+  views/              Twig error templates (403, 404, 500)
 src/
   Kernel.php          Bootstrap: wires container, database, router
   Router.php          Regex-based routing
   Database.php        PDO wrapper
+  ResponseFactory.php Twig views + JSON responses
   ServiceContainer.php  Simple DI container
+frontend/
+  src/
+    App.svelte        Root component + router
+    lib/              Shared state and API helpers
+    components/       Layout, ErrorAlert
+    pages/            Home, Login, Invite, Profile, AdminUsers, NotFound
+  index.html          Vite entry point
+  vite.config.js      Build config (output → public/build/, proxy /api/)
 database/
   0_reset.sql         Drop all tables
   1_create_tables.sql Schema (role, user)
   6_auth_setup.sql    Seed roles
 public/
-  index.php           Single entry point
+  index.php           Single entry point — serves Svelte SPA or routes /api/*
   .htaccess           URL rewriting (Apache)
+  build/              Compiled Svelte output (git-ignored, generated by npm run build)
 maestro               CLI tool
-docker-compose.yml    MySQL 8.4 container
 ```
 
-### Routes
+### API routes
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/` | Index page |
-| GET | `/login` | Login form |
-| POST | `/login` | Authenticate |
-| POST | `/logout` | Sign out |
-| GET | `/invite/{token}` | Set-password page (magic link) |
-| POST | `/invite/{token}` | Activate account |
-| GET | `/profile` | Edit profile (auth required) |
-| POST | `/profile` | Save profile (auth required) |
-| GET | `/admin/users` | User list (admin only) |
-| POST | `/admin/users` | Create user + generate invite (admin only) |
-| POST | `/admin/users/{id}` | Update user (admin only) |
-| POST | `/admin/users/{id}/invite` | Resend invite link (admin only) |
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/api/auth/me` | — | Current user or 401 |
+| POST | `/api/auth/login` | — | Authenticate |
+| POST | `/api/auth/logout` | — | Sign out |
+| GET | `/api/auth/invite/{token}` | — | Validate invite token |
+| POST | `/api/auth/invite/{token}` | — | Set password + activate |
+| GET | `/api/auth/profile` | ✓ | Get current user |
+| POST | `/api/auth/profile` | ✓ | Update name / email / password |
+| GET | `/api/users` | admin | List users + roles |
+| POST | `/api/users` | admin | Create user + generate invite |
+| POST | `/api/users/{id}` | admin | Update user |
+| POST | `/api/users/{id}/invite` | admin | Regenerate invite link |
 
 ---
 
 ## Production
 
-### Production requirements
+### Server requirements
 
-- PHP 8.2+ with `pdo_mysql` extension
-- Apache with `mod_rewrite` enabled (or Nginx with equivalent config)
-- MySQL 5.7+ (8.4 recommended)
-- SSH access (recommended, for running migrations)
+- PHP 8.2+ with `pdo_sqlite` extension
+- Apache with `mod_rewrite` (or Nginx equivalent)
+- No Node.js required
 
-### 1. Build for production
+### 1. Build the frontend
+
+Run this locally (or in CI) before deploying:
+
+```bash
+php maestro build
+```
+
+This writes compiled assets to `public/build/`. Commit or upload this directory to the server.
+
+### 2. Install PHP dependencies
 
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
 
-### 2. Upload files
+### 3. Upload files
 
 Only `public/` is the web root — everything else must live **above** it.
 
@@ -192,6 +201,7 @@ Only `public/` is the web root — everything else must live **above** it.
 | `database/` | above document root |
 | `public/index.php` | document root (`public_html/` or equivalent) |
 | `public/.htaccess` | document root |
+| `public/build/` | document root |
 
 A typical shared-host layout:
 
@@ -200,33 +210,11 @@ A typical shared-host layout:
   app/
   src/
   vendor/
-  database/
-  public_html/       ← document root
+  database/         ← maestro.sqlite lives here
+  public_html/      ← document root
     index.php
     .htaccess
-```
-
-### 3. Configure the database connection
-
-**Option A — environment variables** (if the host supports `SetEnv` in `.htaccess`):
-
-```apache
-SetEnv APP_ENV     "production"
-SetEnv APP_DB_DSN  "mysql:host=your-host;dbname=your_db;charset=utf8mb4"
-SetEnv APP_DB_USER "your_db_user"
-SetEnv APP_DB_PASS "your_db_password"
-```
-
-**Option B — edit `public/index.php` directly:**
-
-```php
-$config = array(
-    'APP_ENV'     => 'production',
-    'VIEWS_PATH'  => 'app/views',
-    'APP_DB_DSN'  => 'mysql:host=your-host;dbname=your_db;charset=utf8mb4',
-    'APP_DB_USER' => 'your_db_user',
-    'APP_DB_PASS' => 'your_db_password',
-);
+    build/
 ```
 
 ### 4. Run migrations
@@ -241,7 +229,7 @@ php maestro migrate
 
 ### 5. Change the default admin password
 
-Log in at `/login` with `admin@localhost` / `admin` and update your password at `/profile` immediately.
+Log in with `admin@localhost` / `admin` and update your password at `/profile` immediately.
 
 ---
 

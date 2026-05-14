@@ -8,7 +8,7 @@ class Request
 
     public string $path;
 
-    /** @var array<string|string[]> */
+    /** @var array<string, mixed> */
     public array $postParameters;
 
     /** @var string[] */
@@ -21,7 +21,7 @@ class Request
      * @param string $method
      * @param string $path
      * @param string[] $queryParameters
-     * @param array<string|string[]> $postParameters
+     * @param array<string, mixed> $postParameters
      */
     public function __construct(string $method, string $path, array $queryParameters, array $postParameters)
     {
@@ -41,10 +41,11 @@ class Request
             return $this->routeParameters[$key];
         }
         if (array_key_exists($key, $this->postParameters)) {
-            if (is_array($this->postParameters[$key])) {
-                return $this->postParameters[$key][0];
+            $value = $this->postParameters[$key];
+            if (is_array($value)) {
+                return isset($value[0]) ? (string) $value[0] : null;
             }
-            return $this->postParameters[$key];
+            return $value !== null ? (string) $value : null;
         }
         if (array_key_exists($key, $this->queryParameters)) {
             return $this->queryParameters[$key];
@@ -59,10 +60,11 @@ class Request
     public function getMany(string $key): ?array
     {
         if (array_key_exists($key, $this->postParameters)) {
-            if (is_array($this->postParameters[$key])) {
-                return $this->postParameters[$key];
+            $value = $this->postParameters[$key];
+            if (is_array($value)) {
+                return array_map('strval', $value);
             }
-            return array($this->postParameters[$key]);
+            return [(string) $value];
         }
         return null;
     }

@@ -80,6 +80,27 @@ class Auth
         $this->userLoaded = false;
     }
 
+    /** Returns a 401 JSON Response if not logged in, null if OK to proceed. */
+    public function guardApi(): ?Response
+    {
+        if (!$this->isLoggedIn()) {
+            return $this->responseFactory->json(['error' => 'Unauthenticated.'], 401);
+        }
+        return null;
+    }
+
+    /** Returns a JSON 401/403 Response if not admin, null if OK to proceed. */
+    public function guardAdminApi(): ?Response
+    {
+        if ($guard = $this->guardApi()) {
+            return $guard;
+        }
+        if (!$this->isAdmin()) {
+            return $this->responseFactory->json(['error' => 'Forbidden.'], 403);
+        }
+        return null;
+    }
+
     /** Returns a redirect Response if not logged in, null if OK to proceed. */
     public function guard(): ?Response
     {

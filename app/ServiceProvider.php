@@ -2,6 +2,8 @@
 
 namespace App;
 
+use App\Controllers\Api\AuthController as ApiAuthController;
+use App\Controllers\Api\UserController as ApiUserController;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\UserController;
@@ -43,5 +45,11 @@ class ServiceProvider implements ServiceProviderInterface
 
         $userController = new UserController($responseFactory, $auth, $userRepository);
         $container->set(UserController::class, $userController);
+
+        $apiAuthController = new ApiAuthController($responseFactory, $auth, $userRepository);
+        $container->set(ApiAuthController::class, $apiAuthController);
+
+        $apiUserController = new ApiUserController($responseFactory, $auth, $userRepository);
+        $container->set(ApiUserController::class, $apiUserController);
     }
 }

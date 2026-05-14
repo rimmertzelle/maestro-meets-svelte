@@ -8,6 +8,10 @@ vendor/
 composer.lock
 .deptrac.cache
 
+# Frontend
+frontend/node_modules/
+public/build/
+
 # User level
 .env
 *.sqlite

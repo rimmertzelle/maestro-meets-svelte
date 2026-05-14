@@ -11,9 +11,9 @@ if ($argv[1] === 'migrate') {
     $config = array(
         'APP_ENV'     => getenv('APP_ENV')    ?: 'development',
         'VIEWS_PATH'  => 'app/views',
-        'APP_DB_DSN'  => getenv('APP_DB_DSN') ?: 'mysql:host=127.0.0.1;port=3306;dbname=maestro;charset=utf8mb4',
-        'APP_DB_USER' => getenv('APP_DB_USER') ?: 'maestro',
-        'APP_DB_PASS' => getenv('APP_DB_PASS') ?: 'secret',
+        'APP_DB_DSN'  => getenv('APP_DB_DSN') ?: 'sqlite:' . __DIR__ . '/database/maestro.sqlite',
+        'APP_DB_USER' => getenv('APP_DB_USER') ?: '',
+        'APP_DB_PASS' => getenv('APP_DB_PASS') ?: '',
     );
 
     $kernel = new \Framework\Kernel($config);
@@ -39,6 +39,22 @@ if ($argv[1] === 'migrate') {
 
 if ($argv[1] === 'serve') {
     exec('php -S 0.0.0.0:8888 -t public');
+}
+
+if ($argv[1] === 'dev') {
+    echo "Starting PHP API server on :8888...\n";
+    exec('php -S 0.0.0.0:8888 -t public > /dev/null 2>&1 & echo $!', $out);
+    $phpPid = trim($out[0] ?? '');
+    register_shutdown_function(function () use ($phpPid) {
+        if ($phpPid) {
+            exec("kill $phpPid");
+        }
+    });
+    passthru('cd frontend && npm run dev');
+}
+
+if ($argv[1] === 'build') {
+    passthru('cd frontend && npm run build');
 }
 
 if ($argv[1] === 'phpstan') {

@@ -11,9 +11,9 @@ use Framework\Request;
 $config = array(
     'APP_ENV'    => getenv('APP_ENV')    ?: 'development',
     'VIEWS_PATH' => 'app/views',
-    'APP_DB_DSN' => getenv('APP_DB_DSN') ?: 'mysql:host=127.0.0.1;port=3306;dbname=maestro;charset=utf8mb4',
-    'APP_DB_USER' => getenv('APP_DB_USER') ?: 'maestro',
-    'APP_DB_PASS' => getenv('APP_DB_PASS') ?: 'secret',
+    'APP_DB_DSN' => getenv('APP_DB_DSN') ?: 'sqlite:' . __DIR__ . '/../database/maestro.sqlite',
+    'APP_DB_USER' => getenv('APP_DB_USER') ?: '',
+    'APP_DB_PASS' => getenv('APP_DB_PASS') ?: '',
 );
 
 // Initialize the Kernel with configuration
@@ -36,8 +36,28 @@ if (!is_string($urlPath)) {
 // Get query (GET) parameters
 $queryParams = $_GET;
 
-// Get POST data
+// Serve the Svelte SPA for all non-API paths (assets are served directly by the web server)
+if (!str_starts_with($urlPath, '/api/')) {
+    $svelteApp = __DIR__ . '/build/index.html';
+    if (file_exists($svelteApp)) {
+        readfile($svelteApp);
+        exit;
+    }
+}
+
+// Parse POST data — support both form-encoded and JSON bodies
 $postData = $_POST;
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+if (str_contains($contentType, 'application/json')) {
+    $rawBody = file_get_contents('php://input');
+    if ($rawBody !== false && $rawBody !== '') {
+        $decoded = json_decode($rawBody, true);
+        if (is_array($decoded)) {
+            /** @var array<string, mixed> $decoded */
+            $postData = $decoded;
+        }
+    }
+}
 
 // Create the Request object
 $request = new Request($method, $urlPath, $queryParams, $postData);

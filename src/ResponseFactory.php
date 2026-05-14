@@ -79,6 +79,16 @@ class ResponseFactory
         return $response;
     }
 
+    /**
+     * @param mixed $data
+     * @throws \JsonException
+     */
+    public function json(mixed $data, int $status = 200): Response
+    {
+        $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        return new Response($encoded, $status, 'Content-Type: application/json');
+    }
+
     public function unauthorized(): Response
     {
         $response = new Response();
@@ -86,7 +96,7 @@ class ResponseFactory
             $response->responseCode = 403;
             $response->body = $this->twig->render('403.html.twig');
             return $response;
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             $response->responseCode = 403;
             $response->body = 'Forbidden';
             return $response;
