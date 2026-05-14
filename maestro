@@ -1,0 +1,54 @@
+<?php
+
+// Ensure everything is there as it should be
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
+    die('You must run composer install');
+}
+
+if ($argv[1] === 'migrate') {
+    require 'vendor/autoload.php';
+
+    $config = array(
+        'APP_ENV'     => getenv('APP_ENV')    ?: 'development',
+        'VIEWS_PATH'  => 'app/views',
+        'APP_DB_DSN'  => getenv('APP_DB_DSN') ?: 'mysql:host=127.0.0.1;port=3306;dbname=maestro;charset=utf8mb4',
+        'APP_DB_USER' => getenv('APP_DB_USER') ?: 'maestro',
+        'APP_DB_PASS' => getenv('APP_DB_PASS') ?: 'secret',
+    );
+
+    $kernel = new \Framework\Kernel($config);
+    $db = $kernel->getDatabase();
+    $db->migrate(__DIR__ . '/database/');
+
+    // Seed default admin user if none exists
+    $adminExists = $db->run("SELECT id FROM `user` LIMIT 1")->fetch();
+    if (!$adminExists) {
+        $hash = password_hash('admin', PASSWORD_BCRYPT);
+        $db->run(
+            "INSERT INTO `user` (name, email, password_hash, role_id)
+             VALUES (:name, :email, :hash, (SELECT id FROM role WHERE name = 'admin'))",
+            ['name' => 'Admin', 'email' => 'admin@localhost', 'hash' => $hash]
+        );
+        echo "\n";
+        echo "Default admin account created:\n";
+        echo "  Email:    admin@localhost\n";
+        echo "  Password: admin\n";
+        echo "Please change the password after first login (/profile).\n";
+    }
+}
+
+if ($argv[1] === 'serve') {
+    exec('php -S 0.0.0.0:8888 -t public');
+}
+
+if ($argv[1] === 'phpstan') {
+    passthru('php vendor/bin/phpstan --ansi');
+}
+
+if ($argv[1] === 'phpcs') {
+    passthru('php vendor/bin/phpcs --colors');
+}
+
+if ($argv[1] === 'deptrac') {
+    passthru('php vendor/bin/deptrac --ansi');
+}

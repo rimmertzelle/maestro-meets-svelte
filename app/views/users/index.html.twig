@@ -1,0 +1,155 @@
+{% extends "partials/base.html.twig" %}
+{% set pageTitle = "Users" %}
+
+{% block content %}
+<div>
+
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-2xl font-semibold text-gray-900 tracking-tight">Users</h1>
+    </div>
+
+    {% if error is defined %}
+        <div class="mb-5 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    {% if invite is not null %}
+        <div class="mb-6 px-4 py-4 rounded-xl bg-teal-50 border border-teal-100">
+            <p class="text-sm font-medium text-teal-800 mb-2">User created. Share this invite link with the user:</p>
+            <code class="block text-xs text-teal-700 break-all bg-teal-100 rounded-lg px-3 py-2"
+                id="invite-url">/invite/{{ invite }}</code>
+            <button onclick="navigator.clipboard.writeText(document.getElementById('invite-url').textContent)"
+                class="mt-2 text-xs text-teal-600 hover:text-teal-800 font-medium underline">
+                Copy to clipboard
+            </button>
+        </div>
+    {% endif %}
+
+    {# User list #}
+    <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-8">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-100 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    <th class="px-4 py-3 text-left">Name</th>
+                    <th class="px-4 py-3 text-left">Email</th>
+                    <th class="px-4 py-3 text-left">Role</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for user in users %}
+                    <tr x-data="{ editing: false }">
+                        {# Read row #}
+                        <td class="px-4 py-3 font-medium text-gray-800" x-show="!editing">{{ user.name }}</td>
+                        <td class="px-4 py-3 text-gray-500" x-show="!editing">{{ user.email }}</td>
+                        <td class="px-4 py-3" x-show="!editing">
+                            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium
+                                {{ user.roleName == 'admin' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700' }}">
+                                {{ user.roleName }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3" x-show="!editing">
+                            {% if user.passwordHash is null %}
+                                <span class="text-xs text-amber-600 font-medium">Pending</span>
+                                {% if user.inviteToken %}
+                                    <button
+                                        onclick="navigator.clipboard.writeText(window.location.origin + '/invite/{{ user.inviteToken }}')"
+                                        class="ml-2 text-xs text-gray-400 hover:text-gray-700 underline">
+                                        Copy link
+                                    </button>
+                                {% else %}
+                                    <form method="POST" action="/admin/users/{{ user.id }}/invite" class="inline ml-2">
+                                        <button type="submit" class="text-xs text-gray-400 hover:text-gray-700 underline">New invite</button>
+                                    </form>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-xs text-teal-600 font-medium">Active</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-right" x-show="!editing">
+                            <button @click="editing = true" class="text-xs text-gray-400 hover:text-gray-700 transition-colors">Edit</button>
+                        </td>
+
+                        {# Edit row #}
+                        <td colspan="5" x-show="editing" x-cloak class="px-4 py-3 bg-gray-50/80">
+                            <form method="POST" action="/admin/users/{{ user.id }}" class="flex flex-wrap gap-2 items-end">
+                                <div class="flex-1 min-w-32">
+                                    <label class="block text-xs text-gray-400 mb-0.5">Name</label>
+                                    <input type="text" name="name" value="{{ user.name }}" required
+                                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                                </div>
+                                <div class="flex-1 min-w-40">
+                                    <label class="block text-xs text-gray-400 mb-0.5">Email</label>
+                                    <input type="email" name="email" value="{{ user.email }}" required
+                                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-0.5">Role</label>
+                                    <select name="role_id"
+                                        class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                                        {% for role in roles %}
+                                            <option value="{{ role.id }}" {{ role.id == user.roleId ? 'selected' }}>{{ role.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit"
+                                        class="px-4 py-1.5 text-xs font-medium rounded-full bg-gray-900 text-white hover:bg-gray-700 transition-colors">
+                                        Save
+                                    </button>
+                                    <button type="button" @click="editing = false"
+                                        class="px-4 py-1.5 text-xs font-medium rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-6 text-sm text-gray-400 text-center">No users yet.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# Add user form #}
+    <div x-data="{ open: false }" class="bg-white rounded-2xl border border-gray-100 p-5">
+        <button @click="open = !open" class="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+            <span x-show="!open">+ Add user</span>
+            <span x-show="open" x-cloak>Cancel</span>
+        </button>
+        <form x-show="open" x-cloak method="POST" action="/admin/users" class="mt-4">
+            <div class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-32">
+                    <label class="block text-xs text-gray-400 mb-0.5">Name <span class="text-red-400">*</span></label>
+                    <input type="text" name="name" required
+                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div class="flex-1 min-w-40">
+                    <label class="block text-xs text-gray-400 mb-0.5">Email <span class="text-red-400">*</span></label>
+                    <input type="email" name="email" required
+                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Role</label>
+                    <select name="role_id"
+                        class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                        {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit"
+                    class="px-4 py-1.5 text-xs font-medium rounded-full bg-gray-900 text-white hover:bg-gray-700 transition-colors">
+                    Create &amp; get invite link
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

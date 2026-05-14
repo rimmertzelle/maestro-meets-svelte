@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Starter — {{ pageTitle ?? 'Home' }}</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+        <style>
+            [x-cloak] { display: none !important; }
+            body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
+        </style>
+    </head>
+    <body class="bg-white text-gray-900 min-h-screen antialiased flex flex-col">
+        <header class="bg-white/90 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
+            <div class="max-w-5xl mx-auto px-6 lg:px-8">
+                <div class="flex items-center justify-between h-12">
+                    <a class="text-sm font-semibold tracking-tight text-gray-900" href="/">Starter</a>
+                    <nav>
+                        <ul class="flex gap-7 text-sm items-center">
+                            {% if auth.isLoggedIn %}
+                                {% if auth.isAdmin %}
+                                    <li><a href="/admin/users" class="text-gray-500 hover:text-gray-900 transition-colors font-medium">Users</a></li>
+                                {% endif %}
+                                <li class="pl-4 border-l border-gray-200 flex items-center gap-3">
+                                    <a href="/profile" class="text-xs text-gray-500 hover:text-gray-900 transition-colors">
+                                        {{ auth.currentUser.name }}
+                                    </a>
+                                    <form method="POST" action="/logout" class="inline">
+                                        <button type="submit" class="text-xs text-gray-400 hover:text-gray-700 transition-colors">Sign out</button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <li><a href="/login" class="text-sm font-medium text-gray-900 hover:text-gray-600 transition-colors">Sign in</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </header>
+        <main class="flex-1 max-w-5xl w-full mx-auto px-6 lg:px-8 py-12">
+            {% block content %}{% endblock %}
+        </main>
+        <footer class="border-t border-gray-100 py-6">
+            <div class="max-w-5xl mx-auto px-6 lg:px-8 text-xs text-gray-400 text-center">
+                &copy; {{ "now"|date("Y") }} Starter
+            </div>
+        </footer>
+    </body>
+</html>

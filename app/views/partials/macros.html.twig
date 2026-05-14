@@ -1,0 +1,174 @@
+{# ============================================================
+   Reusable Twig macros for IT Learning Outcomes
+   Import in any template with:
+   {% import "partials/macros.html.twig" as ui %}
+   ============================================================ #}
+
+{# -------- Badge -------- #}
+{% macro badge(text, color) %}
+    {% set colors = {
+        'blue':   'bg-blue-50 text-blue-700',
+        'green':  'bg-teal-50 text-teal-700',
+        'amber':  'bg-orange-50 text-orange-700',
+        'purple': 'bg-purple-50 text-purple-700',
+        'gray':   'bg-gray-100 text-gray-600',
+        'red':    'bg-red-50 text-red-700',
+    } %}
+    <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {{ colors[color] ?? colors['gray'] }}">{{ text }}</span>
+{% endmacro %}
+
+{# -------- Section heading -------- #}
+{% macro section_heading(text) %}
+    <h2 class="text-lg font-semibold text-gray-900 mb-4 tracking-tight">{{ text }}</h2>
+{% endmacro %}
+
+{# -------- Outcome type styling helper -------- #}
+{% macro outcome_color_classes(type) %}
+    {%- if type == 'Analysis' -%}border-blue-300 bg-blue-50/40
+    {%- elseif type == 'Design' -%}border-teal-300 bg-teal-50/40
+    {%- elseif type == 'Realisation' -%}border-orange-300 bg-orange-50/40
+    {%- elseif type == 'Evaluation' -%}border-red-300 bg-red-50/40
+    {%- elseif type == 'Process' -%}border-purple-300 bg-purple-50/40
+    {%- else -%}border-gray-200 bg-gray-50
+    {%- endif -%}
+{% endmacro %}
+
+{% macro outcome_badge_classes(type) %}
+    {%- if type == 'Analysis' -%}bg-blue-50 text-blue-700
+    {%- elseif type == 'Design' -%}bg-teal-50 text-teal-700
+    {%- elseif type == 'Realisation' -%}bg-orange-50 text-orange-700
+    {%- elseif type == 'Evaluation' -%}bg-red-50 text-red-700
+    {%- elseif type == 'Process' -%}bg-purple-50 text-purple-700
+    {%- else -%}bg-gray-100 text-gray-600
+    {%- endif -%}
+{% endmacro %}
+
+{# -------- Learning outcome card with inline edit -------- #}
+{% macro outcome_card(outcome, year) %}
+    {% set type = outcome.title|split(' — ')|first %}
+    <div x-data="{ editing: false }" class="rounded-2xl border-l-4 {{ _self.outcome_color_classes(type) }} p-5 border border-l-4">
+        <div class="flex items-start justify-between gap-2 mb-3">
+            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium {{ _self.outcome_badge_classes(type) }}">{{ type }}</span>
+            <button @click="editing = !editing" class="text-xs text-gray-400 hover:text-gray-700 transition-colors shrink-0">
+                <span x-show="!editing">Edit</span>
+                <span x-show="editing" x-cloak>Cancel</span>
+            </button>
+        </div>
+
+        <div x-show="!editing">
+            <p class="text-sm font-medium text-gray-800 mb-1.5 leading-snug">{{ outcome.title }}</p>
+            {% if outcome.description %}
+                <p class="text-sm text-gray-500 leading-relaxed">{{ outcome.description }}</p>
+            {% else %}
+                <p class="text-xs text-gray-400 italic">No description yet.</p>
+            {% endif %}
+        </div>
+
+        <form x-show="editing" x-cloak method="POST" action="/learning-outcomes/{{ outcome.id }}" class="space-y-3 mt-1">
+            <input type="hidden" name="year_id" value="{{ year.id }}">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                <input type="text" name="title" value="{{ outcome.title }}"
+                    class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                <textarea name="description" rows="4"
+                    class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">{{ outcome.description }}</textarea>
+            </div>
+            <button type="submit"
+                class="px-4 py-1.5 text-xs font-medium rounded-full bg-gray-900 text-white hover:bg-gray-700 transition-colors">
+                Save
+            </button>
+        </form>
+    </div>
+{% endmacro %}
+
+{# -------- Course table row with inline edit -------- #}
+{% macro course_row(course, year) %}
+    <tr x-data="{ editing: false }">
+        <td class="px-4 py-2.5 text-sm font-mono text-gray-400 whitespace-nowrap" x-show="!editing">
+            {{ course.cu ?? '—' }}
+        </td>
+        <td class="px-4 py-2.5 text-sm font-medium text-gray-800" x-show="!editing">
+            <a href="/courses/{{ course.id }}" class="hover:text-gray-600 transition-colors">{{ course.title }}</a>
+        </td>
+        <td class="px-4 py-2.5 text-sm text-gray-500 text-center" x-show="!editing">
+            {{ course.credits ?? '—' }}
+        </td>
+        <td class="px-4 py-2.5 text-right" x-show="!editing">
+            <button @click="editing = true" class="text-xs text-gray-400 hover:text-gray-700 transition-colors">Edit</button>
+        </td>
+
+        {# Edit row — spans all columns #}
+        <td colspan="4" x-show="editing" x-cloak class="px-4 py-3 bg-gray-50/80">
+            <form method="POST" action="/courses/{{ course.id }}" class="flex flex-wrap gap-2 items-end">
+                <input type="hidden" name="year_id" value="{{ year.id }}">
+                <input type="hidden" name="description" value="{{ course.description }}">
+                <input type="hidden" name="context" value="{{ course.context }}">
+                <input type="hidden" name="assessment" value="{{ course.assessment }}">
+                <input type="hidden" name="track" value="{{ course.track }}">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">CU code</label>
+                    <input type="text" name="cu" value="{{ course.cu }}" placeholder="e.g. IT1.1"
+                        class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-24 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div class="flex-1 min-w-40">
+                    <label class="block text-xs text-gray-400 mb-0.5">Title</label>
+                    <input type="text" name="title" value="{{ course.title }}" required
+                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div class="w-20">
+                    <label class="block text-xs text-gray-400 mb-0.5">Credits</label>
+                    <input type="number" name="credits" value="{{ course.credits }}" min="0"
+                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit"
+                        class="px-4 py-1.5 text-xs font-medium rounded-full bg-gray-900 text-white hover:bg-gray-700 transition-colors">
+                        Save
+                    </button>
+                    <button type="button" @click="editing = false"
+                        class="px-4 py-1.5 text-xs font-medium rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </td>
+    </tr>
+{% endmacro %}
+
+{# -------- Add course form row -------- #}
+{% macro add_course_row(semester, year) %}
+    <tr x-data="{ open: false }">
+        <td colspan="4" class="px-4 py-2.5">
+            <button @click="open = !open" class="text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors">
+                <span x-show="!open">+ Add course</span>
+                <span x-show="open" x-cloak>Cancel</span>
+            </button>
+            <form x-show="open" x-cloak method="POST" action="/courses" class="flex flex-wrap gap-2 items-end mt-2">
+                <input type="hidden" name="semester_id" value="{{ semester.id }}">
+                <input type="hidden" name="year_id" value="{{ year.id }}">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">CU code</label>
+                    <input type="text" name="cu" placeholder="e.g. IT1.1"
+                        class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-24 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div class="flex-1 min-w-40">
+                    <label class="block text-xs text-gray-400 mb-0.5">Title <span class="text-red-400">*</span></label>
+                    <input type="text" name="title" required
+                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <div class="w-20">
+                    <label class="block text-xs text-gray-400 mb-0.5">Credits</label>
+                    <input type="number" name="credits" min="0"
+                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900">
+                </div>
+                <button type="submit"
+                    class="px-4 py-1.5 text-xs font-medium rounded-full bg-gray-900 text-white hover:bg-gray-700 transition-colors">
+                    Add
+                </button>
+            </form>
+        </td>
+    </tr>
+{% endmacro %}
